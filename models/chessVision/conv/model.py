@@ -1,5 +1,8 @@
+import io
 import torch
 import torch.nn as nn
+import chess.pgn
+from chess import Board
 import torch.nn.functional as F
 from utils.constants import PIECE_CHARS
 
@@ -59,3 +62,20 @@ class Model(nn.Module):
         inputs = F.relu(self.accumulator(inputs).squeeze())
         scores = self.decoder(inputs).flatten()
         return scores
+
+        def score(self, pgn, move):
+        '''
+        pgn: string e.g. "1.e4 a6 2.Bc4 "
+        move: string e.g. "a5 "
+        '''
+        # init a game and board
+        game = chess.pgn.read_game(io.StringIO(pgn))
+        board = Board()
+        # catch board up on game to present
+        for past_move in list(game.mainline_moves()):
+            board.push(past_move)
+        # push the move to score
+        board.push(move)
+        # convert to tensor, unsqueezing a dummy batch dimension
+        board_tensor = torch.tensor(encode_board(board)).unsqueeze(0)
+        return self.forward(board_tensor)
