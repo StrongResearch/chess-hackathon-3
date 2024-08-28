@@ -21,10 +21,10 @@ pip install -r requirements.txt
 ```
 
 ### Step 2. Choose a model
-1.1 Nagivate to the **models** subdirectory of this repository.
-1.2 Decide whether you want to train a **chessGPT** or **chessVision** model.
-1.3 Navigate to the appropriate model type subdirectory for your chosen model type.
-1.4 Decide which of the two example models you want to train.
+1. Nagivate to the **models** subdirectory of this repository.
+2. Decide whether you want to train a **chessGPT** or **chessVision** model.
+3. Navigate to the appropriate model type subdirectory for your chosen model type.
+4. Decide which of the two example models you want to train.
 
 ### Step 3. Copy necessary files to repository root
 Copy the following files from the model type subdirectory to the root directory for this repo (i.e. copy from `chess-hackathon-3/models/chessVision` to `chess-hackathon-3`).
