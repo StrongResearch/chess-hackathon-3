@@ -5,6 +5,7 @@ import chess.pgn
 from chess import Board
 import torch.nn.functional as F
 from utils.constants import PIECE_CHARS
+from utils.data_preproc_utils import encode_board
 
 class Residual(nn.Module):
     """
@@ -63,7 +64,7 @@ class Model(nn.Module):
         scores = self.decoder(inputs).flatten()
         return scores
 
-        def score(self, pgn, move):
+    def score(self, pgn, move):
         '''
         pgn: string e.g. "1.e4 a6 2.Bc4 "
         move: string e.g. "a5 "
@@ -75,7 +76,7 @@ class Model(nn.Module):
         for past_move in list(game.mainline_moves()):
             board.push(past_move)
         # push the move to score
-        board.push(move)
+        board.push_san(move)
         # convert to tensor, unsqueezing a dummy batch dimension
         board_tensor = torch.tensor(encode_board(board)).unsqueeze(0)
-        return self.forward(board_tensor)
+        return self.forward(board_tensor).item()

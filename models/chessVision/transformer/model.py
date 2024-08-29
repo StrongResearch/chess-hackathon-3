@@ -60,7 +60,7 @@ class Model(nn.Module):
         for past_move in list(game.mainline_moves()):
             board.push(past_move)
         # push the move to score
-        board.push(move)
+        board.push_san(move)
         # convert to tensor, unsqueezing a dummy batch dimension
         board_tensor = torch.tensor(encode_board(board)).unsqueeze(0)
-        return self.forward(board_tensor)
+        return self.forward(board_tensor).item()
