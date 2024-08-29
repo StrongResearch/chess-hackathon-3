@@ -65,7 +65,6 @@ class Searcher:
         self.tp_score = {}
         self.tp_move = {}
         self.history = set()
-        self.use_classical = False
     def bound(self, pos, gamma, depth, kings, accum_root, accum_up, pos_prev, move_prev, root=True):
         depth = max(depth, 0)
         if pos.score <= -MATE_LOWER: return -MATE_UPPER
@@ -77,11 +76,9 @@ class Searcher:
             if depth > 0 and not root and any(c in pos.board for c in 'RBNQ'):
                 yield None, -self.bound(pos.nullmove(), 1-gamma, depth-3, kings, cur_accum, accum_up, pos, None, root=False)
             if depth == 0:
-                if(not self.use_classical):
-                    interpreter.set_tensor(input_details[0]["index"], cur_accum)
-                    interpreter.invoke()
-                    score = ((((interpreter.get_tensor(output_details[0]["index"]))[0][0])// 16) * 100) // 208
-                else: score = pos.score
+                interpreter.set_tensor(input_details[0]["index"], cur_accum)
+                interpreter.invoke()
+                score = ((((interpreter.get_tensor(output_details[0]["index"]))[0][0])// 16) * 100) // 208
                 yield None, score
             killer = self.tp_move.get(pos)
             if killer and (depth > 0 or pos.value(killer) >= QS_LIMIT):
@@ -91,25 +88,24 @@ class Searcher:
                     yield move, -self.bound(pos.move(move), 1-gamma, depth-1, kings, cur_accum, pos.board[move[0]] == 'K', pos, move, root=False)
         best = -MATE_UPPER
         cur_accum = np.empty([1, 512], dtype=np.float32)
-        if(not self.use_classical):      
-          if accum_up:                 
-              board = chess.Board(tools.renderFEN(pos))
-              turn = board.turn
-              kings = (board.king(turn), board.king(not turn)) if turn else (board.king(not turn), board.king(turn))      
-              ind = get_halfkp_indices(board)
-              cur_accum[0][:256] = np.sum(transformer_weights[ind[0]],axis=0) 
-              cur_accum[0][256:] = np.sum(transformer_weights[ind[1]],axis=0)  
-              cur_accum[0][:256] += transformer_bias
-              cur_accum[0][256:] += transformer_bias
-              accum_up = False
-          else: 
-              if(move_prev):
-                  move_chess = tools.chess_move_from_to(pos_prev, move_prev) 
-                  turn = False if pos_prev.board.startswith('\n') else True
-                  cur_accum = accum_update(accum_root, turn, move_chess, kings)
-              else:                
-                  cur_accum[0][0:256] = accum_root[0][256:]
-                  cur_accum[0][256:] = accum_root[0][0:256]
+        if accum_up:                 
+            board = chess.Board(tools.renderFEN(pos))
+            turn = board.turn
+            kings = (board.king(turn), board.king(not turn)) if turn else (board.king(not turn), board.king(turn))      
+            ind = get_halfkp_indices(board)
+            cur_accum[0][:256] = np.sum(transformer_weights[ind[0]],axis=0) 
+            cur_accum[0][256:] = np.sum(transformer_weights[ind[1]],axis=0)  
+            cur_accum[0][:256] += transformer_bias
+            cur_accum[0][256:] += transformer_bias
+            accum_up = False
+        else: 
+            if(move_prev):
+                move_chess = tools.chess_move_from_to(pos_prev, move_prev) 
+                turn = False if pos_prev.board.startswith('\n') else True
+                cur_accum = accum_update(accum_root, turn, move_chess, kings)
+            else:                
+                cur_accum[0][0:256] = accum_root[0][256:]
+                cur_accum[0][256:] = accum_root[0][0:256]
         for move, score in moves():
             best = max(best, score)
             if best >= gamma:
@@ -127,8 +123,7 @@ class Searcher:
         if best < gamma:
             self.tp_score[pos, depth, root] = Entry(entry.lower, best)
         return best
-    def search(self, pos, movetime, use_classical = False, history=()):
-        self.use_classical = use_classical
+    def search(self, pos, movetime, history=()):
         for depth in range (1,100):
             lower, upper = -MATE_UPPER, MATE_UPPER
             while lower < upper - EVAL_ROUGHNESS:

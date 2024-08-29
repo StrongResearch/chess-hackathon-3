@@ -242,7 +242,6 @@ class Searcher:
         self.tp_move = {}
         self.history = set()
         self.nodes = 0
-        self.use_classical = False
 
     def bound(self, pos, gamma, depth, kings, accum_root, accum_up, pos_prev, move_prev, root=True):
         """ returns r where
@@ -288,12 +287,9 @@ class Searcher:
 
             if depth == 0:
                 #evaluate with nnue's last layers only using tflite or just return score of classical evaluation
-                if(not self.use_classical):
-                    interpreter.set_tensor(input_details[0]["index"], cur_accum)
-                    interpreter.invoke()
-                    score = ((((interpreter.get_tensor(output_details[0]["index"]))[0][0])// 16) * 100) // 208
-                else:
-                    score = pos.score
+                interpreter.set_tensor(input_details[0]["index"], cur_accum)
+                interpreter.invoke()
+                score = ((((interpreter.get_tensor(output_details[0]["index"]))[0][0])// 16) * 100) // 208
                 yield None, score
                 
             # Then killer move. We search it twice, but the tp will fix things for us.
@@ -318,35 +314,34 @@ class Searcher:
         
         #create new empty np.array because changes are reflected to the root and we don't want that        
         cur_accum = np.empty([1, 512], dtype=np.float32)
-        if(not self.use_classical):      
-          # here we update accumulator because king moved  
-          if accum_up:                 
-              board = chess.Board(tools.renderFEN(pos))
-              turn = board.turn
-              
-              # save both kings position to use later when accum_up=False. always put white king first
-              kings = (board.king(turn), board.king(not turn)) if turn else (board.king(not turn), board.king(turn))      
-              # get indices of chess pieces      
-              ind = get_halfkp_indices(board)
-              
-              # do efficient update gathering and summing up the "active" transformer_weights according to the indices of pieces (for white and black).
-              cur_accum[0][:256] = np.sum(transformer_weights[ind[0]],axis=0) 
-              cur_accum[0][256:] = np.sum(transformer_weights[ind[1]],axis=0)  
-              cur_accum[0][:256] += transformer_bias
-              cur_accum[0][256:] += transformer_bias
-              accum_up = False
+        # here we update accumulator because king moved  
+        if accum_up:                 
+            board = chess.Board(tools.renderFEN(pos))
+            turn = board.turn
+            
+            # save both kings position to use later when accum_up=False. always put white king first
+            kings = (board.king(turn), board.king(not turn)) if turn else (board.king(not turn), board.king(turn))      
+            # get indices of chess pieces      
+            ind = get_halfkp_indices(board)
+            
+            # do efficient update gathering and summing up the "active" transformer_weights according to the indices of pieces (for white and black).
+            cur_accum[0][:256] = np.sum(transformer_weights[ind[0]],axis=0) 
+            cur_accum[0][256:] = np.sum(transformer_weights[ind[1]],axis=0)  
+            cur_accum[0][:256] += transformer_bias
+            cur_accum[0][256:] += transformer_bias
+            accum_up = False
 
-          else: 
-              if(move_prev):
-                  move_chess = tools.chess_move_from_to(pos_prev, move_prev) 
-                  turn = False if pos_prev.board.startswith('\n') else True
-                  
-                  #incremental update of the accumulator using the last move and position
-                  cur_accum = accum_update(accum_root, turn, move_chess, kings)
+        else: 
+            if(move_prev):
+                move_chess = tools.chess_move_from_to(pos_prev, move_prev) 
+                turn = False if pos_prev.board.startswith('\n') else True
+                
+                #incremental update of the accumulator using the last move and position
+                cur_accum = accum_update(accum_root, turn, move_chess, kings)
 
-              else:  #for null move cases we just reverse the two halfs of the accumulator                
-                  cur_accum[0][0:256] = accum_root[0][256:]
-                  cur_accum[0][256:] = accum_root[0][0:256]
+            else:  #for null move cases we just reverse the two halfs of the accumulator                
+                cur_accum[0][0:256] = accum_root[0][256:]
+                cur_accum[0][256:] = accum_root[0][0:256]
       
         for move, score in moves():
             best = max(best, score)
@@ -383,29 +378,13 @@ class Searcher:
 
         return best
 
-    def search(self, pos, movetime, use_classical = False, history=()):
+    def search(self, pos, movetime, history=()):
         """ Iterative deepening MTD-bi search """
         self.nodes = 0
         if DRAW_TEST:
             self.history = history
             self.tp_score.clear()
         
-        self.use_classical = use_classical
-        global OPENING_BOOK
-        
-        if OPENING_BOOK:
-            try:
-                with chess.polyglot.open_reader("Perfect2021.bin") as opening_book:  
-                    time.sleep(0.01)  #may need delay for some chess guis, i.e. cutechess              
-                    opening = opening_book.choice(chess.Board(tools.renderFEN(pos)))
-                    opening_book.close()
-                    print('Found book move')
-                    yield 1, opening.move, 0, True
-                    return 
-            except:
-                OPENING_BOOK = False
-                
-
         for depth in range (1,100):
             lower, upper = -MATE_UPPER, MATE_UPPER
             while lower < upper - EVAL_ROUGHNESS:

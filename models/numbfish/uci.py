@@ -49,7 +49,6 @@ def main():
     stack = []
     moveslist = []
     history = set()
-    use_classical = False
     while True:
         if stack:
             smove = stack.pop()
@@ -71,7 +70,6 @@ def main():
 
         elif smove == 'ucinewgame':
             stack.append('position fen ' + tools.FEN_INITIAL)
-            use_classical = False
             history = set()
 
         # syntax specified in UCI
@@ -140,7 +138,7 @@ def main():
             start = time.time()
             ponder = None
             
-            for sdepth, _move, _score, from_book in searcher.search(pos, movetime, use_classical, history):
+            for sdepth, _move, _score, from_book in searcher.search(pos, movetime, history):
                 if(from_book):
                     output('bestmove ' + str(_move))
                     continue
@@ -170,9 +168,9 @@ def main():
                 entry = searcher.tp_score.get((pos, sdepth, True))
                 m, s = searcher.tp_move.get(pos), entry.lower
 
-                if(is_end_game(pos,s)):
-                    use_classical = True
-                    print('searching with classical eval...')
+                #if(is_end_game(pos,s)):
+                    #use_classical = True
+                    #print('searching with classical eval...')
                 #if s == -numbfish.MATE_UPPER:
                 #    output('resign')
                 #else:
