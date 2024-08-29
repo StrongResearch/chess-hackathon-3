@@ -54,7 +54,7 @@ You may develop most any kind of model you like, but your submission must adhere
  - Your submission must conform to the specification (below),
  - Your model must pass the pre-submission validation check (below) to be admitted into the tournament, 
  - Your model must be trained **entirely from scratch** using the provided compute resources. 
- - You **may not** use pretrained models (includes no transfer learning, fine-tuning, or adaptation modules).
+ - You **may not** use pretrained models (this includes no transfer learning, fine-tuning, or adaptation modules).
  - You **may not** hard-code any moves (e.g. no opening books).
  - You may install any dependencies you wish for the purpose of **training** but for inference (e.g. game play / tournament) your model **must not** require any dependencies other than those included in the `requirements.txt` file for this repo.
 
@@ -62,12 +62,12 @@ You may develop most any kind of model you like, but your submission must adhere
 Your submission must follow the following directory structure. Ensure you have moved your `model.py`, `model_config.yaml`, and `checkpoint.pt` files into a **separate sub/directory**. Also copy into this sub/directory any other ancillary files necessary to build and infer on your model. Then copy in `pre_submission_val.py` and run this script to test that your model will build and infer within the allowed time.
 
 ```
-/-team-name
-    |- model.py
-    |- model_config.yaml
-    |- checkpoint.pt
-    |- pre_submission_val.py
-    |- <any-other-files-needed-by-your-model-for-inference>
+┗━team-name
+    ┣━ model.py
+    ┣━ model_config.yaml
+    ┣━ checkpoint.pt
+    ┣━ pre_submission_val.py
+    ┗━ <any-other-files-needed-by-your-model-for-inference>
 ```
 
 #### Specification for model_config.yaml
@@ -75,8 +75,8 @@ Your submission must follow the following directory structure. Ensure you have m
  - The model_config.yaml file must contain all necessary arguments for instantiating your model. See below for demonstration of how the model_config.yaml is expected to be used during the tournament.
 
 #### Specification for model.py
- - The model.py file must contain a class description of your model, which must be a PyTorch module called Model.
- - The model must not move any weights to the GPU upon initialization, it will be expected to run entirely on the CPU during the tournament.
+ - The model.py file must contain a class description of your model, which must be a PyTorch module called `Model`.
+ - The model must not move any weights to the GPU upon initialization, it will be expected to run **entirely on the CPU** during the tournament.
  - The model must implement a `score` method. 
  - The `score` method must accept as input the following two positional arguments:
   1. A PGN string representing the current game up to the most recent move, and
@@ -85,7 +85,7 @@ Your submission must follow the following directory structure. Ensure you have m
  - The model **must not** require GPU access to execute the `score` method.
 
 #### Specification for checkpoint.pt
- - The checkpoint.pt file must be able to be loaded with the torch.load function.
+ - The checkpoint.pt file must be able to be loaded with the `torch.load` function.
  - Your model state dictionary must be able to be obtained from the loaded checkpoint object by calling `checkpoint[“model”]`.
 
 #### Pre-submission model validation
