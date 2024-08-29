@@ -62,12 +62,12 @@ You may develop most any kind of model you like, but your submission must adhere
 Your submission must follow the following directory structure. Ensure you have moved your `model.py`, `model_config.yaml`, and `checkpoint.pt` files into a **separate sub/directory**. Also copy into this sub/directory any other ancillary files necessary to build and infer on your model. Then copy in `pre_submission_val.py` and run this script to test that your model will build and infer within the allowed time.
 
 ```
-┗━team-name
-    ┣━ model.py
-    ┣━ model_config.yaml
-    ┣━ checkpoint.pt
-    ┣━ pre_submission_val.py
-    ┗━ <any-other-files-needed-by-your-model-for-inference>
+└─team-name
+    ├─ model.py
+    ├─ model_config.yaml
+    ├─ checkpoint.pt
+    ├─ pre_submission_val.py
+    └─ <any-other-files-needed-by-your-model-for-inference>
 ```
 
 #### Specification for model_config.yaml
