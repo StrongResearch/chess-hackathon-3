@@ -6,7 +6,8 @@ import functools
 from enum import Enum
 from enum import IntFlag
 
-from tflite_runtime.interpreter import Interpreter
+#from tflite_runtime.interpreter import Interpreter
+import tensorflow.lite as tflite
 
 FEATURE_TRANSFORMER_HALF_DIMENSIONS = 256
 DENSE_LAYERS_WIDTH = 32
@@ -59,7 +60,7 @@ def orient(is_white_pov: bool, sq: int):
 def make_halfkp_index(is_white_pov: bool, king_sq: int, sq: int, p: chess.Piece):
 	return orient(is_white_pov, sq) + PieceSquare.from_piece(p, is_white_pov) + PieceSquare.END * king_sq
 
-interpreter = Interpreter(model_path='nnue_data/hidden_layers.tflite', num_threads=1) #use 1-thread for low latency  
+interpreter = tflite.Interpreter(model_path='nnue_data/hidden_layers.tflite', num_threads=1) #use 1-thread for low latency  
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 interpreter.allocate_tensors()

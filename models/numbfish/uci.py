@@ -16,7 +16,7 @@ import math
 
 from tools import WHITE, BLACK, Unbuffered
 
-PLAY_5min = True
+PLAY_5min = False
 
 def is_end_game(pos, nnue_eval):
     major_pieces_ours = pos.board.count('R') + pos.board.count('Q') + pos.board.count('N')
