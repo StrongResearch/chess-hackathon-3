@@ -406,6 +406,18 @@ def main():
     for _ in tqdm(gen, smoothing=0.01):
         pass
 
+PIECES = "♙♘♗♖♕♔♟♞♝♜♛♚"
+BLANK = " "
+
+def print_board(board):
+    for r in range(8):
+        for c in range(8):
+            cell = BLANK
+            for i, piece in enumerate(PIECES):
+                if board[i,r,c]:
+                   cell = piece
+            print(cell, end="")
+        print()
 
 def test_single_file():
     import sys
@@ -427,6 +439,11 @@ def test_single_file():
 
     print("Inputs", inputs.shape)
     print(inputs)
+    for i in range(inputs.shape[0]):
+        print("Board", i)
+        print_board(inputs[i,:,:].reshape(-1,8,8))
+        print()
+    #print(inputs[0,0,:].reshape(8,8))
     print("Policy", policy.shape)
     print(policy)
     print("Z", z.shape, z)

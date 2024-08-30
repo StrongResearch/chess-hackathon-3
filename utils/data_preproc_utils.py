@@ -11,7 +11,7 @@ from h5py import File as h5pyFile
 from tqdm import tqdm
 from pathlib import Path
 from bs4 import BeautifulSoup
-from .constants import LCZERO_TEST60_URL, PGN_CHARS, PIECE_CHARS, STOCKFISH_PATH
+from constants import LCZERO_TEST60_URL, PGN_CHARS, PIECE_CHARS, STOCKFISH_PATH
 
 ## -- Generating Dataset of Leela Chess Zero PGNs in HDF format -- ##
 
@@ -21,7 +21,7 @@ def scrape_tar_bz2_links(url=LCZERO_TEST60_URL):
         raise Exception(f"Failed to load page: {url}")
     soup = BeautifulSoup(response.content, 'html.parser')
     a_tags = soup.find_all('a')
-    tar_bz2_links = [f"{url}/{a['href']}" for a in a_tags if 'href' in a.attrs and a['href'].endswith('.tar.bz2')]
+    tar_bz2_links = [f"{url}/{a['href']}" for a in a_tags if 'href' in a.attrs and a['href'].endswith('.tar')]
     return tar_bz2_links
 
 def download_tar_files(urls, dest_dir):
