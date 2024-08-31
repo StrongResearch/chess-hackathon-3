@@ -454,7 +454,7 @@ class LeelaDataset(torch.utils.data.IterableDataset):
         shuffle(self.files)
     
     def __len__(self):
-        return 10000
+        return 100
     
     def __iter__(self):
         for file in self.files:

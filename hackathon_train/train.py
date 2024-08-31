@@ -123,7 +123,7 @@ def main(config_path):
         strategy = "ddp"
         accelerator="gpu"
         print("using CUDA!!")
-        nodes = 6
+        nodes = 8
         devices = 6
 
     # Set up trainer
