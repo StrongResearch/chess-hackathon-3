@@ -78,7 +78,6 @@ def main():
                 value_loss_weight=args.value_loss_weight,
                 moves_left_loss_weight=args.moves_left_loss_weight,
                 q_ratio=args.q_ratio,
-                optimizer=args.optimizer,
                 learning_rate=args.learning_rate
             )
 

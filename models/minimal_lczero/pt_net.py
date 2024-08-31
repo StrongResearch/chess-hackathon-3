@@ -29,7 +29,6 @@ class LeelaZeroNet(pl.LightningModule):
         value_loss_weight,
         moves_left_loss_weight,
         q_ratio,
-        optimizer,
         learning_rate
     ):
         super().__init__()
@@ -64,7 +63,7 @@ class LeelaZeroNet(pl.LightningModule):
         self.value_loss_weight = value_loss_weight
         self.moves_left_loss_weight = moves_left_loss_weight
         self.q_ratio = q_ratio
-        self.optimizer = optimizer
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         self.learning_rate = learning_rate
 
     def forward(self, input_planes: torch.Tensor) -> ModelOutput:
