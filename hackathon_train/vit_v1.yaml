@@ -1,5 +1,5 @@
 name:
-  job_name: vit_test
+  job_name: vit_run_v1
 model:
   in_channels: 19
   patch_size: 4
@@ -10,11 +10,11 @@ model:
   num_classes2: 1858
 
 training:
-  batch_size: 4
-  num_epochs: 1
+  batch_size: 2100
+  num_epochs: 30
   learning_rate: 0.001
   weight_decay: 0.01
-  every_n_train_steps: 10
+  every_n_train_steps: 500
 
 data:
   num_samples: 1000

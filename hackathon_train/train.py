@@ -8,6 +8,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 import yaml
 import argparse
 from dataset.leela_dataset import LeelaDataset
+import os
 
 from torch.utils.data import Dataset
 
@@ -90,7 +91,7 @@ class VisionTransformerLightning(pl.LightningModule):
         # )
 
         dataset = LeelaDataset()
-        return DataLoader(dataset, batch_size=self.hparams.training['batch_size'], shuffle=False)
+        return DataLoader(dataset, batch_size=self.hparams.training['batch_size'], shuffle=False, num_workers=16, pin_memory=True)
 
     
 
@@ -102,10 +103,13 @@ def main(config_path):
     # Set up model
     model = VisionTransformerLightning(config)
 
+    save_dir = os.environ.get("OUTPUT_PATH","~")
+    print(f"{save_dir=}")
+
     # Set up callbacks
     checkpoint_callback = ModelCheckpoint(
-        dirpath='/shared/checkpoints/' + config['name']['job_name'],
-        filename=config['name']['job_name'],
+        dirpath=save_dir + '/checkpoints/' + config['name']['job_name'],
+        filename=config['name']['job_name'] + "-{step}",
         save_top_k=-1,
         monitor='train_loss',
         mode='min',
@@ -113,7 +117,7 @@ def main(config_path):
     )
 
     # Set up logger
-    logger = TensorBoardLogger("lightning_logs", name="vision_transformer")
+    logger = TensorBoardLogger(save_dir + "/lightning_logs", name="vision_transformer")
 
     is_cuda_available = torch.cuda.is_available()
     strategy = "auto"
