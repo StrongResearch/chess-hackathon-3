@@ -7,6 +7,8 @@ import zstandard
 from multiprocessing import get_context
 from multiprocessing.shared_memory import SharedMemory
 from numpy.random import default_rng
+import sys
+import tarfile
 
 from policy_index import policy_index
 
@@ -34,7 +36,7 @@ NUM_PLANES = NUM_BOARDS + CASTLING_PLANES + SIDE_TO_MOVE_PLANES + USE_RULE_50 + 
 NUM_ACTIONS = 1858
 
 RECORD_SIZE = 8356
-ARRAY_SHAPES_WITHOUT_BATCH = [(NUM_PLANES, 64), (NUM_ACTIONS,), (3,), (3,), (1,)]
+ARRAY_SHAPES_WITHOUT_BATCH = [(NUM_PLANES, 8, 8), (NUM_ACTIONS,), (3,), (3,), (1,)]
 
 
 def file_generator(file_list, random):
@@ -45,8 +47,18 @@ def file_generator(file_list, random):
         else:
             file_list = sorted(file_list)
         for file in file_list:
+            if file.name.endswith(".tar"):
+                with tarfile.open(file, 'r') as tar:
+                    for member in tar.getmembers():
+                        if member.isfile():
+                            if member.name.endswith(".gz"):
+                                yield deflate.gzip_decompress(tar.extractfile(member).read())
+                            elif file.name.endswith(".zst"):
+                                yield zstd_context.decompress(tar.extractfile(member).read())
+                            else:
+                                raise RuntimeError("Unknown file type!")
             # yield gzip.open(file, 'rb').read()
-            if file.name.endswith(".gz"):
+            elif file.name.endswith(".gz"):
                 yield deflate.gzip_decompress(file.read_bytes())
             elif file.name.endswith(".zst"):
                 yield zstd_context.decompress(file.read_bytes())
@@ -154,11 +166,12 @@ def extract_inputs_outputs_if1(raw):
             zero_plane,
             one_plane
     ], 1
-    ).reshape([-1, NUM_PLANES, 64])
+    ).reshape([-1, NUM_PLANES, 8, 8])
 
     z, best_q, root_q, result_q, played_q, orig_q, ply_count = extract_outputs(raw)
 
-    return inputs, policy, z, best_q, root_q, result_q, played_q, orig_q, ply_count
+    #return inputs, policy, z, best_q, root_q, result_q, played_q, orig_q, ply_count
+    return inputs, policy, z, orig_q, ply_count
 
 
 def offset_generator(batch_size, record_size, skip_factor, random):
@@ -268,6 +281,8 @@ def data_worker(
             file_ptr = 0
 
 
+
+
 def multiprocess_generator(
     chunk_dir,
     batch_size,
@@ -278,12 +293,14 @@ def multiprocess_generator(
 ):
     assert shuffle_buffer_size % batch_size == 0  # This simplifies my life later on
     print("Scanning directory for game data chunks...")
-    files = list(tqdm(chunk_dir.glob("**/*"), desc="Files scanned", unit=" files"))
-    files = [file for file in files if file.suffix in (".gz", ".zst")]
+    print("!!", chunk_dir)
+    files = list(tqdm(chunk_dir.glob("**/*"), desc="Files scanned", unit=" files")) + list(tqdm(chunk_dir.glob("*"), desc="Files scanned", unit=" files"))
+    files = [file for file in files if file.suffix in (".gz", ".zst", ".tar")]
     if len(files) == 0:
         raise FileNotFoundError("No valid input files!")
     print(f"{len(files)} matching files.")
     print("Done!")
+    #raise Exception
     if validation:
         files = sorted(files)
     else:
@@ -385,7 +402,7 @@ def main():
 
     test_dir = Path(sys.argv[1])
     batch_size = 1024
-    num_workers = 16
+    num_workers = 1
     shuffle_buffer_size = 2 ** 19
     skip_factor = 32
     gen_callable = make_callable(
@@ -443,7 +460,47 @@ def test_single_file():
     print(inputs)
     for i in range(inputs.shape[0]):
         print("Board", i)
-        print_board(inputs[i,:,:].reshape(-1,8,8))
+        print_board(inputs[i,:,:])
+        print()
+    #print(inputs[0,0,:].reshape(8,8))
+    print("Policy", policy.shape)
+    print(policy)
+    best_moves = list(sorted(zip(policy[0,:], policy_index)))
+    for i in range(10):
+        print(best_moves[-1-i])
+    print("Z", z.shape, z)
+    print("Q (Best)", best_q.shape, best_q)
+    print("Q (Root)", root_q.shape, root_q)
+    print("Q (Result)", result_q.shape, result_q)
+    print("Q (Played)", played_q.shape, played_q)
+    print("Q (Orig)", orig_q.shape, orig_q)
+    print("Ply", ply.shape, ply)
+
+
+
+
+def generate_from_single_file(filename):
+
+    filename = sys.argv[1]
+
+    offset = 0
+
+    current_file = open(filename,"rb").read()
+
+    if filename.endswith(".gz"):
+        current_file = deflate.gzip_decompress(current_file)
+
+    #data = np.frombuffer(current_file[offset : offset + RECORD_SIZE], dtype=np.uint8)
+    data = np.frombuffer(current_file, dtype=np.uint8).reshape(-1, RECORD_SIZE)
+    result = extract_inputs_outputs_if1(data)
+
+    inputs, policy, z, best_q, root_q, result_q, played_q, orig_q, ply = result
+
+    print("Inputs", inputs.shape)
+    print(inputs)
+    for i in range(inputs.shape[0]):
+        print("Board", i)
+        print_board(inputs[i,:,:])
         print()
     #print(inputs[0,0,:].reshape(8,8))
     print("Policy", policy.shape)
@@ -460,5 +517,7 @@ def test_single_file():
     print("Ply", ply.shape, ply)
 
 if __name__ == "__main__":
-    #main()
-    test_single_file()
+    main()
+    #test_single_file()
+
+    #generate_from_single_file(sys.argv[1])
