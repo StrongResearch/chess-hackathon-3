@@ -479,11 +479,14 @@ class LeelaDataset(torch.utils.data.IterableDataset):
                         indices = range(inputs.shape[0])
                         indices = random.sample(indices, len(indices)//self.skip_factor)
                         for i in indices:
-                            if np.isnan(inputs[i]).any() or np.isnan(policy[i]).any()\
-                                or np.isnan(orig_q[i]).any():
-                                print(f"Bad data {i}")
-                                #continue 
-                            yield inputs[i], policy[i], z[i], orig_q[i], ply_count[i]
-    
+                            if np.isnan(inputs[i]).any(): continue
+                            if np.isnan(policy[i]).any(): continue
+                            if np.isnan(orig_q[i]).any(): continue
+                            yield inputs[i], policy[i], orig_q[i]
 
-    
+# dataset = LeelaDataset(chunk_dir="/Users/ralph/Data/lc0_tars")
+# dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+# it = iter(dataloader)
+# print(
+#    next(it)
+# )
