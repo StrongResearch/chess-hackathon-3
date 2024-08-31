@@ -439,12 +439,16 @@ class LeelaDataset(torch.utils.data.IterableDataset):
         self,
         chunk_dir="/data",
         skip_factor=32,
+        given_files=None #list of files
     ):
 
         self.skip_factor = skip_factor
-
-        print("Scanning directory for game data chunks...")
-        self.files = list(Path(chunk_dir).glob("*"))
+        if given_files is None:
+            print("Scanning directory for game data chunks...")
+            self.files = list(Path(chunk_dir).glob("*"))
+        else:
+            self.files = given_files
+        
         if len(self.files) == 0:
             raise FileNotFoundError("No valid input files!")
         print(f"{len(self.files)} matching files.")

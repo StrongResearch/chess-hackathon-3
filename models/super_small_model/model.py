@@ -8,7 +8,7 @@ class SimpleCNN(nn.Module):
         num_filters=32,
     ):
         super().__init__()
-        self.conv1 = nn.Conv2d(112, num_filters, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(19, num_filters, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(num_filters, num_filters, kernel_size=3, padding=1)
         self.relu = nn.ReLU()
 
@@ -21,7 +21,7 @@ class SimpleCNN(nn.Module):
         )
 
     def forward(self, input_planes: torch.Tensor):
-        x = input_planes.reshape(-1, 112, 8, 8)
+        x = input_planes.reshape(-1, 19, 8, 8)
         x = self.relu(self.conv1(x))
         x = self.relu(self.conv2(x))
 

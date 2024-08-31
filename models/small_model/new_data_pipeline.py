@@ -9,7 +9,8 @@ from multiprocessing.shared_memory import SharedMemory
 from numpy.random import default_rng
 import sys
 import tarfile
-
+import os 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from policy_index import policy_index
 
 # DEFAULT SETTINGS
