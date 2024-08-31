@@ -8,7 +8,7 @@ import chess.pgn
 import numpy as np
 import chess
 from collections import OrderedDict, Counter
-from models.minimal_lczero.policy_index import policy_index
+from submission.policy_index import policy_index, policy_index_flipped
 
 
 def board_to_leela_input(board, expanded=True):
@@ -53,8 +53,8 @@ def board_to_leela_input(board, expanded=True):
     return expanded_planes if expanded else planes
 
 
-def leela_policy_to_uci_moves(policy):
-    return dict(zip(policy_index, policy))
+def leela_policy_to_uci_moves(policy, flip):
+    return dict(zip(policy_index_flipped if flip else policy_index, policy))
 
 
 class Model(nn.Module):
@@ -100,7 +100,7 @@ class Model(nn.Module):
                 )
                 q, policy_output = self.model.forward(tensor_input)
                 policy = policy_output.numpy().flatten()
-                self.policy = leela_policy_to_uci_moves(policy)
+                self.policy = leela_policy_to_uci_moves(policy, flip=(self.board.turn == chess.BLACK))
 
                 print("Analyzed new board")
                 print(self.board.unicode())
@@ -112,4 +112,5 @@ class Model(nn.Module):
         if uci_move not in self.policy:
             print("Very strange!  Can't recognize move: ", move, uci_move)
         result = float(self.policy.get(uci_move, -1.0))
+        print(uci_move, "->", result)
         return result

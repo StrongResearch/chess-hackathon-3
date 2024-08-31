@@ -115,13 +115,13 @@ def find_latest_checkpoint(checkpoint_folder: str):
 
 def main(config_path):
     # Load configuration from YAML file
-    root_dir = os.environ["OUTPUT_PATH"]
+    root_dir = os.environ.get("OUTPUT_PATH", "~")
     with open(config_path, 'r') as config_file:
         config = yaml.safe_load(config_file)
 
     # Set up model
     model = VisionTransformerLightning(config)
-
+    
     save_dir = os.environ.get("OUTPUT_PATH","~")
     print(f"{save_dir=}")
 

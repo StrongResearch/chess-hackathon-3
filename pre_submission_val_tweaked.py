@@ -39,6 +39,7 @@ print("Outputs pass validation tests.")
 
 # testing gameplay
 model1 = Model(**model_config)
+model1.load_state_dict(checkpoint["state_dict"])
 agent0, agent1 = Agent(model0), Agent(model1)
 gameplay_kwargs = {
     "agents": {'white': agent0, 'black': agent1},
