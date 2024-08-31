@@ -1,13 +1,12 @@
 import torch
 import torch.nn as nn
 
-from pt_layers import (
+from model_layers import (
     ConvBlock,
     ResidualBlock,
     ConvolutionalPolicyHead,
     ConvolutionalValueOrMovesLeftHead,
 )
-from pt_losses import policy_loss, value_loss, moves_left_loss
 import torch
 from torch import nn
 from collections import OrderedDict
@@ -19,7 +18,7 @@ class ModelOutput(NamedTuple):
     policy: torch.Tensor
     value: torch.Tensor
 
-class LeelaZeroNet(nn.Module):
+class EasyLeela(nn.Module):
     def __init__(
         self,
         num_filters,
@@ -27,8 +26,6 @@ class LeelaZeroNet(nn.Module):
         se_ratio,
         policy_loss_weight,
         value_loss_weight,
-        q_ratio,
-        optimizer,
         learning_rate
     ):
         super().__init__()
@@ -49,21 +46,11 @@ class LeelaZeroNet(nn.Module):
             output_dim=3,
             num_filters=32,
             hidden_dim=128,
-            relu=False,
+            relu=True, #TODO: check that the likelihood is all positive 
         )
-        # Moves left cannot be less than 0, so we use relu to clamp
-        self.moves_left_head = ConvolutionalValueOrMovesLeftHead(
-            input_dim=num_filters,
-            output_dim=1,
-            num_filters=8,
-            hidden_dim=128,
-            relu=True,
-        )
+  
         self.policy_loss_weight = policy_loss_weight
         self.value_loss_weight = value_loss_weight
-        self.moves_left_loss_weight = moves_left_loss_weight
-        self.q_ratio = q_ratio
-        self.optimizer = optimizer
         self.learning_rate = learning_rate
 
     def forward(self, input_planes: torch.Tensor) -> ModelOutput:
@@ -72,37 +59,4 @@ class LeelaZeroNet(nn.Module):
         flow = self.residual_blocks(flow)
         policy_out = self.policy_head(flow)
         value_out = self.value_head(flow)
-        moves_left_out = self.moves_left_head(flow)
-        return ModelOutput(policy_out, value_out, moves_left_out)
-
-    def training_step(self, batch, batch_idx):
-        with torch.no_grad():
-            for param in self.parameters():
-                if getattr(param, "clamp_weights", False):
-                    fan_in = prod(param.shape[1:])
-                    fan_out = param.shape[0]
-                    n_dims = fan_in * fan_out
-                    scale = sqrt(2 / (fan_in + fan_out))
-                    desired_norm = scale * sqrt(n_dims)
-                    # clip_grad_norm does in-place weight norm clamping for us
-                    torch.nn.utils.clip_grad_norm_(param, max_norm=desired_norm)
-        inputs, policy_target, wdl_target, q_target, moves_left_target = batch
-        policy_out, value_out, moves_left_out = self(inputs)
-        value_target = q_target * self.q_ratio + wdl_target * (1 - self.q_ratio)
-        p_loss = policy_loss(policy_target, policy_out)
-        v_loss = value_loss(value_target, value_out)
-        ml_loss = moves_left_loss(moves_left_target, moves_left_out)
-        total_loss = (
-            self.policy_loss_weight * p_loss
-            + self.value_loss_weight * v_loss
-            + self.moves_left_loss_weight * ml_loss
-        )
-        self.log("policy_loss", p_loss)
-        self.log("value_loss", v_loss)
-        self.log("moves_left_loss", ml_loss)
-        self.log("total_loss", total_loss)
-        return total_loss
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
-        return optimizer
+        return ModelOutput(policy_out, value_out)

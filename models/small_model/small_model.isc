@@ -1,0 +1,7 @@
+isc_project_id = "<isc-project-id>"
+experiment_name = "fashion_mnist"
+gpu_type = "24GB VRAM GPU"
+gpus = 1
+output_path = "~/outputs/small_model"
+dataset_id = "61b8ee4c-1683-4d8e-81e5-4c7db23ede76"
+command = "source ~/.leelaenv/bin/activate && cd ~/isc-demos/fashion_mnist/ && torchrun --nnodes=$NNODES --nproc-per-node=$N_PROC --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT --node_rank=$RANK train.py --lr 0.001 --batch-size 16 --save-dir $OUTPUT_PATH --tboard-path $OUTPUT_PATH/tb"
