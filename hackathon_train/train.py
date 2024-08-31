@@ -11,6 +11,7 @@ import argparse
 
 from torch.utils.data import Dataset
 
+
 from models.VIT_multihead.vit_multi_head import VisionTransformerTwoHeads
 
 
@@ -119,11 +120,20 @@ def main(config_path):
     # Set up logger
     logger = TensorBoardLogger("lightning_logs", name="vision_transformer")
 
+    is_cuda_available = torch.cuda.is_available()
+    strategy = "auto"
+    accelerator = "cpu"
+    if is_cuda_available:
+        strategy = "ddp"
+        accelerator="gpu"
+
     # Set up trainer
     trainer = pl.Trainer(
         max_epochs=config['training']['num_epochs'],
         callbacks=[checkpoint_callback],
-        logger=logger
+        logger=logger,
+        strategy=strategy,
+        accelerator=accelerator,
     )
 
     # Train the model
