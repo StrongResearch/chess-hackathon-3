@@ -14,6 +14,7 @@ training:
   num_epochs: 1
   learning_rate: 0.001
   weight_decay: 0.01
+  every_n_train_steps: 10
 
 data:
   num_samples: 1000

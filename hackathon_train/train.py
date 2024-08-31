@@ -106,9 +106,10 @@ def main(config_path):
     checkpoint_callback = ModelCheckpoint(
         dirpath='/shared/checkpoints/' + config['name']['job_name'],
         filename=config['name']['job_name'],
-        save_top_k=1,
+        save_top_k=-1,
         monitor='train_loss',
-        mode='min'
+        mode='min',
+        every_n_train_steps = config['training']['every_n_train_steps']
     )
 
     # Set up logger
