@@ -6,7 +6,7 @@ import numpy as np
 import chess
 from collections import OrderedDict, Counter
 from models.minimal_lczero.policy_index import policy_index
-from hackathon_train.models import vit_multi_head
+from hackathon_train.models.VIT_multihead import vit_multi_head
 
 def board_to_leela_input(board, expanded=True):
     '''
