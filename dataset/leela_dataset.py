@@ -25,8 +25,8 @@ import tarfile
 #    num_workers=4,
 #    shuffle_buffer_size=2 ** 19,
 # )
-
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=None, pin_memory=True)
+#
+# dataloader = torch.utils.data.DataLoader(dataset, batch_size=None, pin_memory=True)
 
 
 # DEFAULT SETTINGS
