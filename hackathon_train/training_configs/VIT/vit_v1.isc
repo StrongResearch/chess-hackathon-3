@@ -1,0 +1,7 @@
+isc_project_id = cfa46a58-575c-48b3-af67-50643da1df08"
+experiment_name = "vit_v1"
+gpu_type = "24GB VRAM GPU"
+gpus = 1
+output_path = "~/outputs/vit_v1"
+dataset_id = "61b8ee4c-1683-4d8e-81e5-4c7db23ede76"
+command = "source ~/.chess-hackathon-3/bin/activate && cd ~/chess-hackathon-3/hackathon_train && torchrun --nnodes=$NNODES --nproc-per-node=$N_PROC --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT --node_rank=$RANK train.py --lr 0.001 --batch-size 16 --save-dir $OUTPUT_PATH --tboard-path $OUTPUT_PATH/tb"
