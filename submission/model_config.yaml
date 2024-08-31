@@ -1,0 +1,8 @@
+model:
+  in_channels: 19
+  patch_size: 4
+  embed_dim: 1152
+  num_heads: 8
+  num_layers: 12
+  num_classes1: 3
+  num_classes2: 1858
