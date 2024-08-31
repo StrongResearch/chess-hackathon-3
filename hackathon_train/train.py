@@ -11,8 +11,6 @@ import argparse
 
 from torch.utils.data import Dataset
 
-# Import our VisionTransformerTwoHeads model and DummyDatasetVisionTransformer
-# Assuming they are defined in separate files named 'model.py' and 'dataset.py'
 from models.VIT_multihead.vit_multi_head import VisionTransformerTwoHeads
 
 
@@ -111,9 +109,9 @@ def main(config_path):
 
     # Set up callbacks
     checkpoint_callback = ModelCheckpoint(
-        dirpath='checkpoints',
+        dirpath='/shared/checkpoints',
         filename='vit-{epoch:02d}-{val_loss:.2f}',
-        save_top_k=3,
+        save_top_k=1,
         monitor='val_loss',
         mode='min'
     )
