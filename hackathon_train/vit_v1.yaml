@@ -1,3 +1,5 @@
+name:
+  job_name: vit_test
 model:
   in_channels: 19
   patch_size: 4
@@ -9,7 +11,7 @@ model:
 
 training:
   batch_size: 4
-  num_epochs: 3
+  num_epochs: 1
   learning_rate: 0.001
   weight_decay: 0.01
 

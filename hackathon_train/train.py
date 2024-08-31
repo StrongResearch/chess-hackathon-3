@@ -104,10 +104,10 @@ def main(config_path):
 
     # Set up callbacks
     checkpoint_callback = ModelCheckpoint(
-        dirpath='/shared/checkpoints',
-        filename='vit-{epoch:02d}-{val_loss:.2f}',
+        dirpath='/shared/checkpoints/' + config['name']['job_name'],
+        filename=config['name']['job_name'],
         save_top_k=1,
-        monitor='val_loss',
+        monitor='train_loss',
         mode='min'
     )
 
