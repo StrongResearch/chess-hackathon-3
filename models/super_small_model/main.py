@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from model import SimpleCNN, ZeroNet
+from model import SimpleCNN, BiggerNet
 torch.backends.cudnn.benchmark = True
 from argparse import ArgumentParser
 from pathlib import Path
@@ -11,7 +11,7 @@ import sys
 import os 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from models.small_model.new_data_pipeline import multiprocess_generator
-from hackathon_train.dataset.leela_dataset import create_data_splits, LeelaDataset
+from hackathon_train.dataset.leela_dataset import  LeelaDataset
 import logging 
 from pathlib import Path
 from utils import split_files
@@ -60,7 +60,7 @@ def train(model, train_dataset, val_dataset, args):
     optimizer = torch.optim.Adam(model.parameters())
 
     loss_function = AlphaLoss()
-
+    mse_loss = nn.MSELoss()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
@@ -78,7 +78,8 @@ def train(model, train_dataset, val_dataset, args):
           
             #TODO: if small cnn model, change the inputs
             policy_pred, value_pred = model(inputs)
-            loss = loss_function(orig_q, value_pred, policy, policy_pred)
+            #loss = loss_function(orig_q, value_pred, policy, policy_pred)
+            loss = mse_loss(policy, policy_pred)
 
             optimizer.zero_grad()
             loss.backward()
@@ -90,12 +91,12 @@ def train(model, train_dataset, val_dataset, args):
         avg_train_loss = train_loss / train_steps
 
         if epoch % args.val_freq != 0:
-            log_message = f"Epoch: {epoch + 1} | Train Loss: {avg_train_loss:.4f}"
+            log_message = f"Epoch: {epoch + 1} | Train Loss: {avg_train_loss:.6f}"
             print(log_message)
             logging.info(log_message)
         
         ### Val loss step ###
-        if epoch % args.val_freq == 0:
+        if epoch > 0 and epoch % args.val_freq == 0:
             model.eval()
             val_loss = 0.0
             val_steps = 0 
@@ -106,13 +107,14 @@ def train(model, train_dataset, val_dataset, args):
                     inputs, policy, z, orig_q, ply_count = inputs.to(device), policy.to(device), z.to(device), orig_q.to(device), ply_count.to(device)
 
                     policy_pred, value_pred = model(inputs)
-                    loss = loss_function(orig_q, value_pred, policy, policy_pred)
+                    #loss = loss_function(orig_q, value_pred, policy, policy_pred)      
+                    loss = mse_loss(policy, policy_pred)
 
                     val_loss += loss.item()
                     val_steps += 1
 
             avg_val_loss = val_loss / val_steps 
-            log_message = f"Epoch: {epoch + 1} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}"
+            log_message = f"Epoch: {epoch + 1} | Train Loss: {avg_train_loss:.6f} | Val Loss: {avg_val_loss:.6f}"
             print(log_message)
             logging.info(log_message)
 
@@ -134,6 +136,7 @@ def test(model, test_dataset,  args):
     total_loss = 0.0
     
     loss_function = AlphaLoss()
+    mse_loss = nn.MSELoss()
     #loss_function = torch.nn.MSELoss()
     with torch.no_grad():
         batch_step = 0
@@ -141,13 +144,14 @@ def test(model, test_dataset,  args):
             inputs, policy, z, orig_q, ply_count = [item.to(device) for item in output]
 
             policy_pred, value_pred = model(inputs)
-            loss = loss_function(orig_q, value_pred, policy, policy_pred)
+            #loss = loss_function(orig_q, value_pred, policy, policy_pred)
+            loss = mse_loss(policy, policy_pred)
 
             total_loss += loss.item()
             batch_step += 1
     
     avg_test_loss = total_loss / batch_step
-    print(f"Avg test loss is {avg_test_loss:.4f}")
+    print(f"Avg test loss is {avg_test_loss:.6f}")
     return avg_test_loss
 
 
@@ -163,8 +167,9 @@ class Driver:
     def main(self, args, should_train: bool):
         model_weight_path = 'models/super_small_model/model_weights/model_epoch_60.pth'
 
-        model = ZeroNet(num_res_blocks=2)
+        #model = ZeroNet(num_res_blocks=0)
         #model = SimpleCNN() #CAN SWAP MODEL HERE
+        model = BiggerNet()
         files = list(Path(args.dataset_path).glob("*"))
         train_files, val_files, test_files = split_files(files)
        

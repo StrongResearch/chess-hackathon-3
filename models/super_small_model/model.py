@@ -27,83 +27,45 @@ class SimpleCNN(nn.Module):
         x = self.relu(self.conv2(x))
 
         policy_out = self.policy_head(x)
-        return policy_out
+        return policy_out, None
     
-##### AlphaZero implementation #####
-class ConvBlock(nn.Module):
-    def __init__(self):
-        super(ConvBlock, self).__init__()
-        self.action_size = 8*8*73
-        self.conv1 = nn.Conv2d(19, 256, 3, stride=1, padding=1)
-        self.bn1 = nn.BatchNorm2d(256)
+
+
+
+class BiggerNet(nn.Module):
+    def __init__(self, num_filters=32, num_blocks=3):
+        super(BiggerNet, self).__init__()
+        self.conv_input = nn.Conv2d(19, num_filters, kernel_size=3, padding=1)
+        self.blocks = nn.ModuleList([nn.Conv2d(num_filters, num_filters, kernel_size=3, padding=1) for _ in range(num_blocks)])
+        self.relu = nn.ReLU()
+
+        self.policy_head = nn.Sequential(
+            nn.Conv2d(num_filters, 128, kernel_size=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(128*8*8, 1858),
+            nn.Tanh()
+        )
 
     def forward(self, s):
-        s = s.view(-1, 19, 8, 8)  # batch_size x channels x board_x x board_y
-        s = F.relu(self.bn1(self.conv1(s)))
-        return s
-
-class ResBlock(nn.Module):
-    def __init__(self, inplanes=256, planes=256, stride=1, downsample=None):
-        super(ResBlock, self).__init__()
-        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride,
-                     padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
-                     padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(planes)
-
-    def forward(self, x):
-        residual = x
-        out = self.conv1(x)
-        out = F.relu(self.bn1(out))
-        out = self.conv2(out)
-        out = self.bn2(out)
-        out += residual
-        out = F.relu(out)
-        return out
-    
-class OutBlock(nn.Module):
-    def __init__(self):
-        super(OutBlock, self).__init__()
-        # value head 
-        self.conv = nn.Conv2d(256, 1, kernel_size=1) # value head
-        self.bn = nn.BatchNorm2d(1)
-        self.fc1 = nn.Linear(8*8, 64)
-        self.fc2 = nn.Linear(64, 3)
+        s = s.view(-1, 19, 8, 8)
+        s = self.relu(self.conv_input(s))
         
-        self.conv1 = nn.Conv2d(256, 128, kernel_size=1) # policy head
-        self.bn1 = nn.BatchNorm2d(128)
-        self.logsoftmax = nn.LogSoftmax(dim=1)
-        self.fc = nn.Linear(8*8*128, 1858)
-    
-    def forward(self,s):
-        v = F.relu(self.bn(self.conv(s))) # value head
-        v = v.view(-1, 8*8)  # batch_size X channel X height X width
-        v = F.relu(self.fc1(v))
-        v = self.logsoftmax(self.fc2(v)).exp()
-        #v = F.tanh(self.fc2(v))
+        for block in self.blocks:
+            s = self.relu(block(s))
         
-        p = F.relu(self.bn1(self.conv1(s))) # policy head
-        p = p.view(-1, 8*8*128)
-        p = self.fc(p)
-        p = F.tanh(p) 
-        #p = self.logsoftmax(p).exp()
-        return p, v
+        policy_out = self.policy_head(s)
+        return policy_out, None
     
-class ZeroNet(nn.Module):
-    def __init__(self, num_res_blocks=19):
-        super(ZeroNet, self).__init__()
-        self.num_res_blocks = num_res_blocks
-        self.conv = ConvBlock()
-        for block in range(num_res_blocks):
-            setattr(self, "res_%i" % block, ResBlock())
-        self.outblock = OutBlock()
-    
-    def forward(self,s):
-        s = self.conv(s)
-        for block in range(self.num_res_blocks):
-            s = getattr(self, "res_%i" % block)(s)
-        s = self.outblock(s)
-        return s
 
 
+
+
+
+
+# Initialization function
+def init_weights(m):
+    if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
+        nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+        if m.bias is not None:
+            nn.init.zeros_(m.bias)
