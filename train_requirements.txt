@@ -2,3 +2,4 @@ deflate
 tqdm
 numpy
 zstandard
+lightning
