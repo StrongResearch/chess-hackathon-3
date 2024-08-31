@@ -2,7 +2,10 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from model import SimpleCNN, BiggerNet, init_weights
+<<<<<<< HEAD
 from model import SimpleCNN, ZeroNet
+=======
+>>>>>>> 9025686 (add init weight)
 torch.backends.cudnn.benchmark = True
 from argparse import ArgumentParser
 from pathlib import Path
