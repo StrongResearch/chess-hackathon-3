@@ -2,10 +2,6 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from model import SimpleCNN, BiggerNet, init_weights
-<<<<<<< HEAD
-from model import SimpleCNN, ZeroNet
-=======
->>>>>>> 9025686 (add init weight)
 torch.backends.cudnn.benchmark = True
 from argparse import ArgumentParser
 from pathlib import Path
@@ -57,6 +53,7 @@ def setup_logging(log_file):
     logging.basicConfig(filename=log_file, level=logging.INFO)
 
 def train(model, train_dataset, val_dataset, args):
+    print("Start training.")
     setup_logging(f"{args.save_dir}/training_log.txt")
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=args.train_bs, pin_memory=False)
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=args.train_bs, pin_memory=False)
@@ -77,8 +74,8 @@ def train(model, train_dataset, val_dataset, args):
         train_loss = 0.0
         train_steps = 0 
         for batch_idx, output in enumerate(train_dataloader):
-            inputs, policy, z, orig_q, ply_count = output[0],output[1],output[2],output[3],output[4] 
-            inputs, policy, z, orig_q, ply_count = inputs.to(device), policy.to(device), z.to(device), orig_q.to(device), ply_count.to(device)
+            inputs, policy, orig_q,  = output[0],output[1],output[2],
+            inputs, policy, orig_q, = inputs.to(device), policy.to(device), orig_q.to(device)
           
             #TODO: if small cnn model, change the inputs
             policy_pred, value_pred = model(inputs)
@@ -94,7 +91,7 @@ def train(model, train_dataset, val_dataset, args):
         
         avg_train_loss = train_loss / train_steps
 
-        if epoch % args.val_freq != 0:
+        if epoch == 0 or epoch % args.val_freq != 0:
             log_message = f"Epoch: {epoch + 1} | Train Loss: {avg_train_loss:.6f}"
             print(log_message)
             logging.info(log_message)
@@ -107,8 +104,8 @@ def train(model, train_dataset, val_dataset, args):
 
             with torch.no_grad():
                 for batch_idx, output in enumerate(val_dataloader):
-                    inputs, policy, z, orig_q, ply_count = output[0],output[1],output[2],output[3],output[4] 
-                    inputs, policy, z, orig_q, ply_count = inputs.to(device), policy.to(device), z.to(device), orig_q.to(device), ply_count.to(device)
+                    inputs, policy, orig_q,  = output[0],output[1],output[2],
+                    inputs, policy, orig_q, = inputs.to(device), policy.to(device), orig_q.to(device)
 
                     policy_pred, value_pred = model(inputs)
                     #loss = loss_function(orig_q, value_pred, policy, policy_pred)      
@@ -145,7 +142,8 @@ def test(model, test_dataset,  args):
     with torch.no_grad():
         batch_step = 0
         for batch_idx, output in tqdm(enumerate(test_dataloader)):
-            inputs, policy, z, orig_q, ply_count = [item.to(device) for item in output]
+            inputs, policy, orig_q,  = output[0],output[1],output[2],
+            inputs, policy, orig_q, = inputs.to(device), policy.to(device), orig_q.to(device)
 
             policy_pred, value_pred = model(inputs)
             #loss = loss_function(orig_q, value_pred, policy, policy_pred)
@@ -174,7 +172,7 @@ class Driver:
         #model = ZeroNet(num_res_blocks=0)
         #model = SimpleCNN() #CAN SWAP MODEL HERE
         model = BiggerNet()
-        model.apply(init_weights)
+        #model.apply(init_weights)
         files = list(Path(args.dataset_path).glob("*"))
         train_files, val_files, test_files = split_files(files)
        
