@@ -55,8 +55,10 @@ def file_generator(file_list, random):
                                 yield deflate.gzip_decompress(tar.extractfile(member).read())
                             elif file.name.endswith(".zst"):
                                 yield zstd_context.decompress(tar.extractfile(member).read())
+                            elif member.name=="LICENSE":
+                                pass
                             else:
-                                raise RuntimeError("Unknown file type!")
+                                print("Unknown file type!", file.name)
             # yield gzip.open(file, 'rb').read()
             elif file.name.endswith(".gz"):
                 yield deflate.gzip_decompress(file.read_bytes())
