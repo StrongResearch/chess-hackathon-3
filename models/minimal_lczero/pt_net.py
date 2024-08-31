@@ -63,8 +63,8 @@ class LeelaZeroNet(pl.LightningModule):
         self.value_loss_weight = value_loss_weight
         self.moves_left_loss_weight = moves_left_loss_weight
         self.q_ratio = q_ratio
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         self.learning_rate = learning_rate
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
     def forward(self, input_planes: torch.Tensor) -> ModelOutput:
         flow = input_planes.reshape(-1, 112, 8, 8)
