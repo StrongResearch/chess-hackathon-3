@@ -1,0 +1,16 @@
+data:
+  input_size: 8
+  num_samples: 1000
+model:
+  embed_dim: 192
+  in_channels: 11
+  num_classes1: 3
+  num_classes2: 1858
+  num_heads: 8
+  num_layers: 6
+  patch_size: 4
+training:
+  batch_size: 16
+  learning_rate: 0.001
+  num_epochs: 1
+  weight_decay: 0.01
