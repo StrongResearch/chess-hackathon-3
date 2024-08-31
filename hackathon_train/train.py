@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 import yaml
 import argparse
-
+from dataset.leela_dataset import LeelaDataset
 
 from torch.utils.data import Dataset
 
@@ -16,7 +16,7 @@ from models.VIT_multihead.vit_multi_head import VisionTransformerTwoHeads
 
 
 class DummyDatasetVisionTransformer(Dataset):
-    def __init__(self, num_samples=1000, input_channels=11, input_size=8, num_classes1=3, num_classes2=1858):
+    def __init__(self, num_samples=1000, input_channels=19, input_size=8, num_classes1=3, num_classes2=1858):
         self.num_samples = num_samples
         self.input_channels = input_channels
         self.input_size = input_size
@@ -55,7 +55,7 @@ class VisionTransformerLightning(pl.LightningModule):
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
-        x, y1, y2 = batch
+        x,  y2, y1  = batch
         out1, out2 = self(x)
         loss1 = self.criterion1(out1, y1)
         loss2 = self.criterion2(out2, y2)
@@ -81,24 +81,18 @@ class VisionTransformerLightning(pl.LightningModule):
         return optimizer
 
     def train_dataloader(self):
-        dataset = DummyDatasetVisionTransformer(
-            num_samples=self.hparams.data['num_samples'],
-            input_channels=self.hparams.model['in_channels'],
-            input_size=self.hparams.data['input_size'],
-            num_classes1=self.hparams.model['num_classes1'],
-            num_classes2=self.hparams.model['num_classes2']
-        )
-        return DataLoader(dataset, batch_size=self.hparams.training['batch_size'], shuffle=True)
+        # dataset = DummyDatasetVisionTransformer(
+        #     num_samples=self.hparams.data['num_samples'],
+        #     input_channels=self.hparams.model['in_channels'],
+        #     input_size=self.hparams.data['input_size'],
+        #     num_classes1=self.hparams.model['num_classes1'],
+        #     num_classes2=self.hparams.model['num_classes2']
+        # )
 
-    def val_dataloader(self):
-        dataset = DummyDatasetVisionTransformer(
-            num_samples=self.hparams.data['num_samples'] // 5,  # Smaller validation set
-            input_channels=self.hparams.model['in_channels'],
-            input_size=self.hparams.data['input_size'],
-            num_classes1=self.hparams.model['num_classes1'],
-            num_classes2=self.hparams.model['num_classes2']
-        )
-        return DataLoader(dataset, batch_size=self.hparams.training['batch_size'])
+        dataset = LeelaDataset()
+        return DataLoader(dataset, batch_size=self.hparams.training['batch_size'], shuffle=False)
+
+    
 
 def main(config_path):
     # Load configuration from YAML file
@@ -123,15 +117,22 @@ def main(config_path):
     is_cuda_available = torch.cuda.is_available()
     strategy = "auto"
     accelerator = "cpu"
+    devices = 1
+    nodes=1
     if is_cuda_available:
         strategy = "ddp"
         accelerator="gpu"
+        print("using CUDA!!")
+        nodes = 6
+        devices = 6
 
     # Set up trainer
     trainer = pl.Trainer(
         max_epochs=config['training']['num_epochs'],
         callbacks=[checkpoint_callback],
         logger=logger,
+        num_nodes=nodes,
+        devices=devices,
         strategy=strategy,
         accelerator=accelerator,
     )

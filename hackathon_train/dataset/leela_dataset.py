@@ -453,6 +453,9 @@ class LeelaDataset(torch.utils.data.IterableDataset):
 
         shuffle(self.files)
     
+    def __len__(self):
+        return 10000
+    
     def __iter__(self):
         for file in self.files:
             assert file.name.endswith(".tar")
