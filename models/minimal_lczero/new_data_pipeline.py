@@ -427,11 +427,12 @@ def main():
     for _ in tqdm(gen, smoothing=0.01):
         pass
 
+#PIECES = "♟♞♝♜♛♚♙♘♗♖♕♔"
 PIECES = "♙♘♗♖♕♔♟♞♝♜♛♚"
 BLANK = " "
 
 def print_board(board):
-    for r in range(8):
+    for r in range(7,-1,-1):
         for c in range(8):
             cell = BLANK
             for i, piece in enumerate(PIECES):
@@ -496,30 +497,32 @@ def generate_from_single_file(filename):
     data = np.frombuffer(current_file, dtype=np.uint8).reshape(-1, RECORD_SIZE)
     result = extract_inputs_outputs_if1(data)
 
-    inputs, policy, z, best_q, root_q, result_q, played_q, orig_q, ply = result
+    #inputs, policy, z, best_q, root_q, result_q, played_q, orig_q, ply = result
+    inputs, policy, z, orig_q, ply = result
 
     print("Inputs", inputs.shape)
     print(inputs)
     for i in range(inputs.shape[0]):
         print("Board", i)
         print_board(inputs[i,:,:])
+        print(inputs[i,12:17,:,].mean(axis=(1,2)))
+        best_moves = list(sorted(zip(policy[i,:], policy_index)))
+        for i in range(5):
+            print(best_moves[-1-i])
         print()
     #print(inputs[0,0,:].reshape(8,8))
     print("Policy", policy.shape)
     print(policy)
-    best_moves = list(sorted(zip(policy[0,:], policy_index)))
-    for i in range(10):
-        print(best_moves[-1-i])
     print("Z", z.shape, z)
-    print("Q (Best)", best_q.shape, best_q)
-    print("Q (Root)", root_q.shape, root_q)
-    print("Q (Result)", result_q.shape, result_q)
-    print("Q (Played)", played_q.shape, played_q)
+    #print("Q (Best)", best_q.shape, best_q)
+    #print("Q (Root)", root_q.shape, root_q)
+    #print("Q (Result)", result_q.shape, result_q)
+    #print("Q (Played)", played_q.shape, played_q)
     print("Q (Orig)", orig_q.shape, orig_q)
     print("Ply", ply.shape, ply)
 
 if __name__ == "__main__":
-    main()
+    #main()
     #test_single_file()
 
-    #generate_from_single_file(sys.argv[1])
+    generate_from_single_file(sys.argv[1])
