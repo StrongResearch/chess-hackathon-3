@@ -7,7 +7,10 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 import yaml
 import argparse
-from .dataset.leela_dataset import LeelaDataset
+try:
+  from .dataset.leela_dataset import LeelaDataset
+except:
+  from dataset.leela_dataset import LeelaDataset
 import os
 
 from torch.utils.data import Dataset
