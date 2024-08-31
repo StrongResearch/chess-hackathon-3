@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from model import SimpleCNN, BiggerNet
+from model import SimpleCNN, BiggerNet, init_weights
 torch.backends.cudnn.benchmark = True
 from argparse import ArgumentParser
 from pathlib import Path
@@ -170,6 +170,7 @@ class Driver:
         #model = ZeroNet(num_res_blocks=0)
         #model = SimpleCNN() #CAN SWAP MODEL HERE
         model = BiggerNet()
+        model.apply(init_weights)
         files = list(Path(args.dataset_path).glob("*"))
         train_files, val_files, test_files = split_files(files)
        
