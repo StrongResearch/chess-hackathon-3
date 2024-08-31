@@ -16,7 +16,18 @@ except:
 import os
 
 from torch.utils.data import Dataset
+import tempfile
 
+
+
+
+class AtomicModelCheckpoint(ModelCheckpoint):
+    def _save_checkpoint(self, trainer, filepath):
+        # Create a temporary file on the same filesystem
+        with tempfile.NamedTemporaryFile(delete=False, dir=os.path.dirname(filepath)) as tmp_file:
+            super()._save_checkpoint(trainer, tmp_file.name)
+            # Atomically move the temporary file to the target location
+            os.rename(tmp_file.name, filepath)
 
 
 
@@ -126,7 +137,7 @@ def main(config_path):
     print(f"{save_dir=}")
 
     # Set up callbacks
-    checkpoint_callback = ModelCheckpoint(
+    checkpoint_callback = AtomicModelCheckpoint(
         dirpath=root_dir+'/checkpoints/' + config['name']['job_name'],
         filename=config['name']['job_name'],
         save_top_k=-1,
