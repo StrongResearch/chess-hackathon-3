@@ -475,7 +475,7 @@ class LeelaDataset(torch.utils.data.IterableDataset):
                         for i in indices:
                             yield inputs[i], policy[i], z[i], orig_q[i], ply_count[i]
 
-dataset = LeelaDataset(chunk_dir="/Users/ralph/Data/lc0_tars")
+dataset = LeelaDataset(chunk_dir="/data")
 
 
 
