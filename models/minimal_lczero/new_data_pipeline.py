@@ -8,6 +8,8 @@ from multiprocessing import get_context
 from multiprocessing.shared_memory import SharedMemory
 from numpy.random import default_rng
 
+from policy_index import policy_index
+
 # DEFAULT SETTINGS
 HISTORY_LENGTH = 7
 USE_REPETITION_PLANE = True
@@ -446,6 +448,9 @@ def test_single_file():
     #print(inputs[0,0,:].reshape(8,8))
     print("Policy", policy.shape)
     print(policy)
+    best_moves = list(sorted(zip(policy[0,:], policy_index)))
+    for i in range(10):
+        print(best_moves[-1-i])
     print("Z", z.shape, z)
     print("Q (Best)", best_q.shape, best_q)
     print("Q (Root)", root_q.shape, root_q)
