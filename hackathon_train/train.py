@@ -117,7 +117,7 @@ def main(config_path):
     )
 
     # Set up logger
-    logger = TensorBoardLogger(save_dir + "/lightning_logs", name="vision_transformer")
+    logger = TensorBoardLogger(save_dir + "/lightning_logs/" +  config['name']['job_name'], name="vision_transformer")
 
     is_cuda_available = torch.cuda.is_available()
     strategy = "auto"

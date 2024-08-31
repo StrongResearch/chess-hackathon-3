@@ -470,7 +470,6 @@ class LeelaDataset(torch.utils.data.IterableDataset):
                         elif member.name=="LICENSE":
                             continue
                         else:
-                            print("Unknown file type!", file.name)
                             continue
                         
                         data = np.frombuffer(current_file, dtype=np.uint8).reshape(-1, RECORD_SIZE)
