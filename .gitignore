@@ -164,3 +164,5 @@ cython_debug/
 
 # Project specific ignores
 data/
+hackathon_train/chekpoints/*
+hackathon_train/lightning_logs/*

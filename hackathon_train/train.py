@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 
 # Import our VisionTransformerTwoHeads model and DummyDatasetVisionTransformer
 # Assuming they are defined in separate files named 'model.py' and 'dataset.py'
-from vit_multi_head import VisionTransformerTwoHeads
+from models.VIT_multihead.vit_multi_head import VisionTransformerTwoHeads
 
 
 class DummyDatasetVisionTransformer(Dataset):

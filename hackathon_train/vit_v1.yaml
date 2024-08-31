@@ -9,7 +9,7 @@ model:
 
 training:
   batch_size: 16
-  num_epochs: 1
+  num_epochs: 3
   learning_rate: 0.001
   weight_decay: 0.01
 
