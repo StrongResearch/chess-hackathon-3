@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn import functional as F
 
 from model_layers import (
     ConvBlock,
@@ -30,7 +31,7 @@ class EasyLeela(nn.Module):
     ):
         super().__init__()
         self.input_block = ConvBlock(
-            input_channels=112, filter_size=3, output_channels=num_filters
+            input_channels=19, filter_size=3, output_channels=num_filters
         )
         residual_blocks = OrderedDict(
             [
@@ -46,7 +47,7 @@ class EasyLeela(nn.Module):
             output_dim=3,
             num_filters=32,
             hidden_dim=128,
-            relu=True, #TODO: check that the likelihood is all positive 
+            relu=False, #TODO: check that the likelihood is all positive 
         )
   
         self.policy_loss_weight = policy_loss_weight
@@ -54,9 +55,14 @@ class EasyLeela(nn.Module):
         self.learning_rate = learning_rate
 
     def forward(self, input_planes: torch.Tensor) -> ModelOutput:
-        flow = input_planes.reshape(-1, 112, 8, 8)
+        flow = input_planes.reshape(-1, 19, 8, 8)
         flow = self.input_block(flow)
         flow = self.residual_blocks(flow)
         policy_out = self.policy_head(flow)
+        # expect it to be in [-1,1]
+        policy_out = torch.tanh(policy_out)
+
         value_out = self.value_head(flow)
+        #expect it to be in [0,1]
+        value_out = F.softmax(value_out, dim=1)
         return ModelOutput(policy_out, value_out)

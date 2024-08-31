@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn import functional as F
 from model import EasyLeela
 torch.backends.cudnn.benchmark = True
 from argparse import ArgumentParser
@@ -7,6 +8,11 @@ from pathlib import Path
 from new_data_pipeline import multiprocess_generator
 from threading import Thread
 from queue import Queue
+import sys 
+import os 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+from hackathon_train.dataset.leela_dataset import LeelaDataset
 
 
 def queued_generator(queue, **kwargs):
@@ -16,28 +22,26 @@ def queued_generator(queue, **kwargs):
         #batch = [torch.from_numpy(tensor).pin_memory() for tensor in batch]
         queue.put(batch)
 
+def policy_loss(target: torch.Tensor, output: torch.Tensor):
+    # Illegal moves are marked by a value of -1 in the labels - we mask these with large negative values
+    output.masked_fill_(target < 0, -1e4)
+    # The large negative values will still break the loss, so we replace them with 0 once we finish masking
+    target = F.relu(target)
+    log_prob = F.log_softmax(output, dim=1)
+    nll = -(target * log_prob).sum() / output.shape[0]
+    return nll
 
-class LeelaDataset(torch.utils.data.IterableDataset):
-    def __init__(
-        self, **kwargs
-    ):
-        self.queue = Queue(maxsize=4)
-        kwargs['queue'] = self.queue
-        self.thread = Thread(target=queued_generator, kwargs=kwargs, daemon=True)
-        self.thread.start()
 
-    def __iter__(self):
-        # worker_info = torch.utils.data.get_worker_info()
-        # if worker_info is not None:
-        #     raise RuntimeError("This dataset does multiprocessing internally, and should only have a single torch worker!")
-        return self
+def value_loss(target: torch.Tensor, output: torch.Tensor):
+    log_prob = F.log_softmax(output, dim=1)
+    value_nll = -(target * log_prob)
+    return value_nll.sum() / output.shape[0]
 
-    def __next__(self):
-        return self.queue.get(block=True)
+
 
 def train(model, dataset, args):
-    breakpoint()
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, pin_memory=False)
+    print("Entered train")
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=32, pin_memory=False)
 
     optimizer = torch.optim.Adam(model.parameters())
 
@@ -49,22 +53,31 @@ def train(model, dataset, args):
     # train loop
     model.train()
     for epoch in range(args.max_epochs):
-        for batch_idx, (inputs, targets) in enumerate(dataloader):
-            inputs, targets = inputs.to(device), targets.to(device)
-
-            outputs = model(input) #TODO: check outputs 
-            loss = loss_function(outputs, targets)
-
+        epoch_loss = 0.
+        for batch_idx, output in enumerate(dataloader):
+            inputs, policy, z, orig_q, ply_count = output[0],output[1],output[2],output[3],output[4] 
+            inputs, policy, z, orig_q, ply_count = inputs.to(device), policy.to(device), z.to(device), orig_q.to(device), ply_count.to(device)
+            #change the inputs
+            (policy_out, value_out) = model(inputs)
+            
+            loss = 0.5*nn.CrossEntropyLoss()(orig_q, value_out) + 0.5*nn.MSELoss()(policy, policy_out)  
+            #loss = 0.5*policy_loss(policy, policy_out) + 0.5*value_loss(orig_q, value_out)
+            epoch_loss +=loss.item()
             optimizer.zero_grad()
             loss.backward()
+            if torch.isnan(loss):
+                print(f"NaN loss detected. policy_out: {policy_out}, value_out: {value_out}")
+                print(f"policy: {policy}, orig_q: {orig_q}")
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
-            if batch_idx % 100 == 0:
-                print(f"Epoch {epoch+1}/{args.max_epochs}, Batch {batch_idx}/{len(dataloader)}, Loss: {loss.item():.4f}")
-
             # Check if we've reached the limit_train_batches
-            if batch_idx >= args.limit_train_batches - 1:
-                break
+            #if batch_idx >= args.limit_train_batches - 1:
+            #    break
+        
+        avg_epoch_loss = epoch_loss / (batch_idx + 1)
+        print(f"Epoch {epoch+1}/{args.max_epochs} completed. Average Loss: {avg_epoch_loss:.4f}")
+
         
         torch.save(model.state_dict(), f"{args.save_dir}/model_epoch_{epoch+1}.pth")
         
@@ -77,29 +90,23 @@ class Driver:
         self.model_save_folder = model_save_folder
 
     def main(self, args, should_train: bool):
-        with torch.no_grad():
-            model = EasyLeela(
+        model = EasyLeela(
                 num_filters=args.num_filters,
                 num_residual_blocks=args.num_residual_blocks,
                 se_ratio=args.se_ratio,
                 policy_loss_weight=args.policy_loss_weight,
                 value_loss_weight=args.value_loss_weight,
                 learning_rate=args.learning_rate
-            )
-            if should_train:
-                dataset = LeelaDataset(
-                    chunk_dir=args.dataset_path,
-                    batch_size=args.batch_size,
-                    skip_factor=args.skip_factor,
-                    num_workers=args.num_workers,
-                    shuffle_buffer_size=args.shuffle_buffer_size,
-                )
+        )
+        if should_train:
+            print("Before dataset")
+            dataset = LeelaDataset()
 
-                train(model, dataset, args)
-                print("Finished training.")
-             
-            else:
-                raise NotImplementedError("Have yet to upload")
+            train(model, dataset, args)
+            print("Finished training.")
+            
+        else:
+            raise NotImplementedError("Have yet to upload")
 
 
     
@@ -127,6 +134,7 @@ if __name__ == "__main__":
     parser.add_argument("--policy_loss_weight", type=float, default=1.0)
     parser.add_argument("--value_loss_weight", type=float, default=1.6)
     #These parameters control the training
-    parser.add_argument('--max_epochs', type=int, default=100)
+    parser.add_argument('--max_epochs', type=int, default=10)
+    parser.add_argument('--limit_train_batches', type=int, default=1000)
     args = parser.parse_args()
     driver.main(args, True)

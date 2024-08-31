@@ -89,6 +89,7 @@ class ConvolutionalPolicyHead(nn.Module):
     def forward(self, inputs):
         flow = self.conv_block(inputs)
         flow = self.conv(flow)
+        flow = flow.view(flow.size(0), -1)
         output = self.fc(flow)
         return output
 
