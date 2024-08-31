@@ -58,10 +58,7 @@ class VisionTransformerLightning(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x,  y2, y1  = batch
         out1, out2 = self(x)
-        print(out1.shape, y1.shape)
-        print(out1.norm(), y1.norm())
-        print(out2.shape, y2.shape)
-        print(out2.norm(), y2.norm())
+
         loss1 = self.criterion1(out1, y1)
         loss2 = self.criterion2(out2, y2)
         loss = loss1 + loss2
@@ -161,10 +158,11 @@ def main(config_path):
         accelerator=accelerator
     )
      
-    print('resuming from ', latest_checkpoint)
+    
     # Train the model
     if latest_checkpoint is not None:
         trainer.fit(model, ckpt_path=latest_checkpoint)
+        print('resuming from ', latest_checkpoint)
     else:
         trainer.fit(model)
 
