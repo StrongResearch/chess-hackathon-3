@@ -475,12 +475,9 @@ class LeelaDataset(torch.utils.data.IterableDataset):
                         for i in indices:
                             yield inputs[i], policy[i], z[i], orig_q[i], ply_count[i]
 
-dataset = LeelaDataset(chunk_dir="/data")
-
-
-
-# dataloader = torch.utils.data.DataLoader(dataset, batch_size=5)
-#it = iter(dataloader)
-#print(
+# dataset = LeelaDataset(chunk_dir="/Users/ralph/Data/lc0_tars")
+# dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+# it = iter(dataloader)
+# print(
 #    next(it)
-#)
+# )
