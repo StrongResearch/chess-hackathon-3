@@ -15,18 +15,7 @@ from multiprocessing.shared_memory import SharedMemory
 from numpy.random import default_rng
 import sys
 import tarfile
-
-
-# Example usage
-# dataset = LeelaDataset(
-#    chunk_dir="/data",
-#    batch_size=1024,
-#    skip_factor=32,
-#    num_workers=4,
-#    shuffle_buffer_size=2 ** 19,
-# )
-#
-# dataloader = torch.utils.data.DataLoader(dataset, batch_size=None, pin_memory=True)
+import random
 
 
 # DEFAULT SETTINGS
@@ -420,7 +409,7 @@ def queued_generator(queue, **kwargs):
         queue.put(batch)
 
 
-class LeelaDataset(torch.utils.data.IterableDataset):
+class LeelaDatasetParallel(torch.utils.data.IterableDataset):
     def __init__(
         self, **kwargs
     ):
@@ -437,3 +426,61 @@ class LeelaDataset(torch.utils.data.IterableDataset):
 
     def __next__(self):
         return self.queue.get(block=True)
+
+#    chunk_dir="/data",
+#    batch_size=1024,
+#    skip_factor=32,
+#    num_workers=4,
+#    shuffle_buffer_size=2 ** 19,
+
+class LeelaDataset(torch.utils.data.IterableDataset):
+
+    def __init__(
+        self,
+        chunk_dir="/data",
+        skip_factor=32,
+    ):
+
+        self.skip_factor = skip_factor
+
+        print("Scanning directory for game data chunks...")
+        self.files = list(Path(chunk_dir).glob("*"))
+        if len(self.files) == 0:
+            raise FileNotFoundError("No valid input files!")
+        print(f"{len(self.files)} matching files.")
+
+        shuffle(self.files)
+    
+    def __iter__(self):
+        for file in self.files:
+            assert file.name.endswith(".tar")
+            with tarfile.open(file, "r") as tar:
+                members = list(tar.getmembers())
+                shuffle(members)
+                for member in members:
+                    if member.isfile():
+                        if member.name.endswith(".gz"):
+                            current_file = deflate.gzip_decompress(tar.extractfile(member).read())
+                        elif member.name=="LICENSE":
+                            continue
+                        else:
+                            print("Unknown file type!", file.name)
+                            continue
+                        
+                        data = np.frombuffer(current_file, dtype=np.uint8).reshape(-1, RECORD_SIZE)
+                        inputs, policy, z, orig_q, ply_count = extract_inputs_outputs_if1(data)
+
+                        indices = range(inputs.shape[0])
+                        indices = random.sample(indices, len(indices)//self.skip_factor)
+                        for i in indices:
+                            yield inputs[i], policy[i], z[i], orig_q[i], ply_count[i]
+
+dataset = LeelaDataset(chunk_dir="/Users/ralph/Data/lc0_tars")
+
+
+
+# dataloader = torch.utils.data.DataLoader(dataset, batch_size=5)
+#it = iter(dataloader)
+#print(
+#    next(it)
+#)
