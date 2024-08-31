@@ -439,16 +439,14 @@ class LeelaDataset(torch.utils.data.IterableDataset):
         self,
         chunk_dir="/data",
         skip_factor=32,
-        given_files=None #list of files
+        tar_files=None
     ):
-
         self.skip_factor = skip_factor
-        if given_files is None:
+        if tar_files is None:
             print("Scanning directory for game data chunks...")
             self.files = list(Path(chunk_dir).glob("*"))
         else:
-            self.files = given_files
-        
+            self.files = tar_files
         if len(self.files) == 0:
             raise FileNotFoundError("No valid input files!")
         print(f"{len(self.files)} matching files.")
@@ -482,6 +480,44 @@ class LeelaDataset(torch.utils.data.IterableDataset):
                                 print(f"Bad data {i}")
                                 #continue 
                             yield inputs[i], policy[i], z[i], orig_q[i], ply_count[i]
+    
+
+    
+def create_data_splits(chunk_dir: str, train_ratio: float = 0.75, val_ratio: float = 0.1):
+    '''
+    chunk_dir: directory of tar files
+    '''
+    all_tar_objs = [] #list of (tar_file_str, tar_member)
+    files = list(Path(chunk_dir).glob("*"))
+    for file in files:
+        assert file.name.endswith(".tar")
+        with tarfile.open(file, "r") as tar:
+            members = list(tar.getmembers())
+            tar_objs = [(file, member) for member in members]
+            all_tar_objs.extend(tar_objs)
+    
+    random.shuffle(all_tar_objs)
+    
+    train_size = int(len(all_tar_objs) * train_ratio)
+    val_size = int(len(all_tar_objs) * val_ratio)
+
+    train_objs = all_tar_objs[:train_size]
+    val_objs = all_tar_objs[train_size:train_size+val_size]
+    test_objs = all_tar_objs[train_size+val_size:]
+
+    return train_objs, val_objs, test_objs
+    
+
+
+
+
+
+
+
+
+            
+
+
 
 # dataset = LeelaDataset(chunk_dir="/Users/ralph/Data/lc0_tars")
 # dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)

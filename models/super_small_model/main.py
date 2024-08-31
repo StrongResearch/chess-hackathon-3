@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from model import SimpleCNN
+from model import SimpleCNN, ZeroNet
 torch.backends.cudnn.benchmark = True
 from argparse import ArgumentParser
 from pathlib import Path
@@ -11,10 +11,13 @@ import sys
 import os 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from models.small_model.new_data_pipeline import multiprocess_generator
-from hackathon_train.dataset.leela_dataset import LeelaDataset
+from hackathon_train.dataset.leela_dataset import create_data_splits, LeelaDataset
 import logging 
 from pathlib import Path
 from utils import split_files
+from tqdm import tqdm 
+
+
 
 
 def policy_loss(pred, target, valid_move_weight=0.75):
@@ -32,6 +35,19 @@ def policy_loss(pred, target, valid_move_weight=0.75):
     loss = valid_move_weight*mse(non_negative_preds, non_negative_targets) + (1-valid_move_weight)*mse(negative_preds, negative_targets)
     return loss 
 
+class AlphaLoss(torch.nn.Module):
+    def __init__(self):
+        super(AlphaLoss, self).__init__()
+
+    def forward(self, y_value, value_pred, y_policy, policy_pred):
+        mse_crit = torch.nn.MSELoss()
+        policy_loss = mse_crit(y_policy, policy_pred)
+        
+        value_loss = mse_crit(y_value, value_pred) 
+        
+        total_error = policy_loss + value_loss
+        return total_error
+
 
 def setup_logging(log_file):
     logging.basicConfig(filename=log_file, level=logging.INFO)
@@ -43,7 +59,7 @@ def train(model, train_dataset, val_dataset, args):
     
     optimizer = torch.optim.Adam(model.parameters())
 
-    loss_function = torch.nn.MSELoss()
+    loss_function = AlphaLoss()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -60,9 +76,9 @@ def train(model, train_dataset, val_dataset, args):
             inputs, policy, z, orig_q, ply_count = output[0],output[1],output[2],output[3],output[4] 
             inputs, policy, z, orig_q, ply_count = inputs.to(device), policy.to(device), z.to(device), orig_q.to(device), ply_count.to(device)
           
-            #change the inputs
-            policy_pred = model(inputs)
-            loss = loss_function(policy_pred, policy)
+            #TODO: if small cnn model, change the inputs
+            policy_pred, value_pred = model(inputs)
+            loss = loss_function(orig_q, value_pred, policy, policy_pred)
 
             optimizer.zero_grad()
             loss.backward()
@@ -72,6 +88,11 @@ def train(model, train_dataset, val_dataset, args):
             train_steps += 1
         
         avg_train_loss = train_loss / train_steps
+
+        if epoch % args.val_freq != 0:
+            log_message = f"Epoch: {epoch + 1} | Train Loss: {avg_train_loss:.4f}"
+            print(log_message)
+            logging.info(log_message)
         
         ### Val loss step ###
         if epoch % args.val_freq == 0:
@@ -84,8 +105,8 @@ def train(model, train_dataset, val_dataset, args):
                     inputs, policy, z, orig_q, ply_count = output[0],output[1],output[2],output[3],output[4] 
                     inputs, policy, z, orig_q, ply_count = inputs.to(device), policy.to(device), z.to(device), orig_q.to(device), ply_count.to(device)
 
-                    policy_pred = model(inputs)
-                    loss = loss_function(policy_pred, policy)
+                    policy_pred, value_pred = model(inputs)
+                    loss = loss_function(orig_q, value_pred, policy, policy_pred)
 
                     val_loss += loss.item()
                     val_steps += 1
@@ -112,14 +133,15 @@ def test(model, test_dataset,  args):
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.train_bs)
     total_loss = 0.0
     
-    loss_function = torch.nn.MSELoss()
+    loss_function = AlphaLoss()
+    #loss_function = torch.nn.MSELoss()
     with torch.no_grad():
         batch_step = 0
-        for batch_idx, output in enumerate(test_dataloader):
+        for batch_idx, output in tqdm(enumerate(test_dataloader)):
             inputs, policy, z, orig_q, ply_count = [item.to(device) for item in output]
 
-            policy_pred = model(inputs)
-            loss = loss_function(policy_pred, policy)
+            policy_pred, value_pred = model(inputs)
+            loss = loss_function(orig_q, value_pred, policy, policy_pred)
 
             total_loss += loss.item()
             batch_step += 1
@@ -139,14 +161,16 @@ class Driver:
         self.model_save_folder = model_save_folder
 
     def main(self, args, should_train: bool):
-        model_weight_path = 'chess-hackathon-3/models/super_small_model/model_weights/model_epoch_60.pth'
+        model_weight_path = 'models/super_small_model/model_weights/model_epoch_60.pth'
 
-        model = SimpleCNN() #CAN SWAP MODEL HERE
-        all_files = list(Path(args.dataset_path).glob("*"))
-        train_files, val_files, test_files = split_files(all_files)
-        train_dataset = LeelaDataset(args.dataset_path, given_files=train_files)
-        val_dataset = LeelaDataset(args.dataset_path, given_files=val_files)
-        test_dataset = LeelaDataset(args.dataset_path, given_files=test_files)
+        model = ZeroNet(num_res_blocks=2)
+        #model = SimpleCNN() #CAN SWAP MODEL HERE
+        files = list(Path(args.dataset_path).glob("*"))
+        train_files, val_files, test_files = split_files(files)
+       
+        train_dataset = LeelaDataset(tar_files=train_files)
+        val_dataset = LeelaDataset(tar_files=val_files)
+        test_dataset = LeelaDataset(tar_files=test_files)
 
         if should_train:
             train(model, train_dataset, val_dataset, args)
@@ -154,7 +178,7 @@ class Driver:
             
         else: #load model 
             model.load_state_dict(torch.load(model_weight_path))
-        
+   
         eval_loss = test(model, test_dataset, args)
     
 
@@ -176,5 +200,6 @@ if __name__ == "__main__":
     #These parameters control the training
     parser.add_argument('--max_epochs', type=int, default=100)
     parser.add_argument('--train_bs', type=int, default=32)
+    parser.add_argument('--val_freq', type=int, default=5)
     args = parser.parse_args()
-    driver.main(args, False)
+    driver.main(args, True)

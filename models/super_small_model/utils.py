@@ -1,4 +1,4 @@
-def split_files(files, train_ratio=0.75, val_ratio=0.1, test_ratio=0.15):
+def split_files(files, train_ratio=0.6, val_ratio=0.2, test_ratio=0.2):
     assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-5, "Ratios must sum to 1"
     
     num_files = len(files)
