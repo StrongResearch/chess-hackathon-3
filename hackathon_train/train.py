@@ -9,14 +9,15 @@ import yaml
 import argparse
 try:
   from .dataset.leela_dataset import LeelaDataset
+  from .models.VIT_multihead.vit_multi_head import VisionTransformerTwoHeads
 except:
   from dataset.leela_dataset import LeelaDataset
+  from models.VIT_multihead.vit_multi_head import VisionTransformerTwoHeads
 import os
 
 from torch.utils.data import Dataset
 
 
-from .models.VIT_multihead.vit_multi_head import VisionTransformerTwoHeads
 
 
 class DummyDatasetVisionTransformer(Dataset):
