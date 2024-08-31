@@ -49,8 +49,8 @@ class VisionTransformerLightning(pl.LightningModule):
             num_classes1=config['model']['num_classes1'],
             num_classes2=config['model']['num_classes2']
         )
-        self.criterion1 = nn.CrossEntropyLoss()
-        self.criterion2 = nn.CrossEntropyLoss()
+        self.criterion1 = nn.MSELoss()
+        self.criterion2 = nn.MSELoss()
 
     def forward(self, x):
         return self.model(x)
@@ -58,20 +58,16 @@ class VisionTransformerLightning(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x,  y2, y1  = batch
         out1, out2 = self(x)
+        print(out1.shape, y1.shape)
+        print(out1.norm(), y1.norm())
+        print(out2.shape, y2.shape)
+        print(out2.norm(), y2.norm())
         loss1 = self.criterion1(out1, y1)
         loss2 = self.criterion2(out2, y2)
         loss = loss1 + loss2
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
-    def validation_step(self, batch, batch_idx):
-        x, y1, y2 = batch
-        out1, out2 = self(x)
-        loss1 = self.criterion1(out1, y1)
-        loss2 = self.criterion2(out2, y2)
-        loss = loss1 + loss2
-        self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
-        return loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
@@ -93,10 +89,32 @@ class VisionTransformerLightning(pl.LightningModule):
         dataset = LeelaDataset()
         return DataLoader(dataset, batch_size=self.hparams.training['batch_size'], shuffle=False, num_workers=16, pin_memory=True)
 
+
+def find_latest_checkpoint(checkpoint_folder: str):
+    """
+    Find the latest checkpoint file in the given folder.
     
+    Args:
+        checkpoint_folder (str): Path to the folder containing checkpoints.
+    
+    Returns:
+        Optional[str]: Path to the latest checkpoint file, or None if no checkpoints found.
+    """
+    if not os.path.exists(checkpoint_folder):
+        return None
+    
+    checkpoints = [
+        os.path.join(checkpoint_folder, f)
+        for f in os.listdir(checkpoint_folder)
+        if f.endswith('.ckpt')
+    ]
+    
+    return max(checkpoints, key=os.path.getctime) if checkpoints else None
+
 
 def main(config_path):
     # Load configuration from YAML file
+    root_dir = os.environ["OUTPUT_PATH"]
     with open(config_path, 'r') as config_file:
         config = yaml.safe_load(config_file)
 
@@ -108,8 +126,8 @@ def main(config_path):
 
     # Set up callbacks
     checkpoint_callback = ModelCheckpoint(
-        dirpath=save_dir + '/checkpoints/' + config['name']['job_name'],
-        filename=config['name']['job_name'] + "-{step}",
+        dirpath=root_dir+'/checkpoints/' + config['name']['job_name'],
+        filename=config['name']['job_name'],
         save_top_k=-1,
         monitor='train_loss',
         mode='min',
@@ -117,7 +135,7 @@ def main(config_path):
     )
 
     # Set up logger
-    logger = TensorBoardLogger(save_dir + "/lightning_logs/" +  config['name']['job_name'], name="vision_transformer")
+    logger = TensorBoardLogger(root_dir+"/lightning_logs/"+config['name']['job_name'], name="vision_transformer")
 
     is_cuda_available = torch.cuda.is_available()
     strategy = "auto"
@@ -130,8 +148,9 @@ def main(config_path):
         print("using CUDA!!")
         nodes = 8
         devices = 6
+    
+    latest_checkpoint = find_latest_checkpoint(root_dir+'/checkpoints/' + config['name']['job_name'])
 
-    # Set up trainer
     trainer = pl.Trainer(
         max_epochs=config['training']['num_epochs'],
         callbacks=[checkpoint_callback],
@@ -139,11 +158,15 @@ def main(config_path):
         num_nodes=nodes,
         devices=devices,
         strategy=strategy,
-        accelerator=accelerator,
+        accelerator=accelerator
     )
-
+     
+    print('resuming from ', latest_checkpoint)
     # Train the model
-    trainer.fit(model)
+    if latest_checkpoint is not None:
+        trainer.fit(model, ckpt_path=latest_checkpoint)
+    else:
+        trainer.fit(model)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Vision Transformer with PyTorch Lightning")
