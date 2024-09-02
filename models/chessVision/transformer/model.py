@@ -10,13 +10,13 @@ from utils.constants import PIECE_CHARS
 
 class Model(nn.Module):
     """Transformer Model"""
-    def __init__(self, nlayers=10, embed_dim=512, nhead=8, inner_dim=512, ff_dim=2048, dropout=0.1, causal=True, norm_first=False, ghost=False, device='cpu'):
+    def __init__(self, nlayers=10, embed_dim=512, nhead=8, head_dim=64, ff_dim=2048, dropout=0.1, causal=True, norm_first=False, ghost=False, device='cpu'):
         super().__init__()
         self.vocab = PIECE_CHARS
         self.device = device
         self.embedder = nn.Embedding(len(self.vocab), embed_dim)
         self.pos_encoder = PositionalEncoding(embed_dim, dropout)
-        enc_params = {"embed_dim": embed_dim, "nhead": nhead, "inner_dim": inner_dim, "ff_dim": ff_dim, "dropout":  dropout, "causal": causal, "norm_first": norm_first, "ghost": ghost, "device": device}
+        enc_params = {"embed_dim": embed_dim, "nhead": nhead, "head_dim": head_dim, "ff_dim": ff_dim, "dropout":  dropout, "causal": causal, "norm_first": norm_first, "ghost": ghost, "device": device}
         layers = OrderedDict([(f"EncoderLayer{i}", TransformerEncoderBlock(**enc_params)) for i in range(nlayers)])
         self.encoder = nn.Sequential(layers)
         self.reducer = nn.Linear(embed_dim, 1)
