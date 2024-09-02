@@ -1,7 +1,7 @@
 nlayers: 10
-embed_dim: 256
+embed_dim: 512
 nhead: 8
-inner_dim: 256
+head_dim: 64
 ff_dim: 2048
 dropout: 0.05
 causal: True
