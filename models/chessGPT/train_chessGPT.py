@@ -33,7 +33,7 @@ def get_args_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-config", help="model config path", type=Path, default="/root/chess-hackathon-3/model_config.yaml")
     parser.add_argument("--save-dir", help="save checkpoint path", type=Path, default=os.environ["OUTPUT_PATH"])
-    parser.add_argument("--load-dir", help="path to checkpoint.pt file to resume from", type=Path, default=None)
+    parser.add_argument("--load-path", help="path to checkpoint.pt file to resume from", type=Path, default=None)
     parser.add_argument("--bs", help="batch size", type=int, default=4)
     parser.add_argument("--lr", help="learning rate", type=float, default=0.001)
     parser.add_argument("--wd", help="weight decay", type=float, default=0.01)
@@ -95,9 +95,9 @@ def main(args, timer):
     local_resume_path = os.path.join(args.save_dir, saver.symlink_name)
     if os.path.exists(local_resume_path) and os.path.islink(local_resume_path):
         checkpoint_path = os.path.join(os.readlink(local_resume_path), "checkpoint.pt")
-    elif args.load_dir:
-        if os.path.exists(args.load_dir) and os.path.isfile(args.load_dir):
-            checkpoint_path = args.load_dir
+    elif args.load_path:
+        if os.path.exists(args.load_path) and os.path.isfile(args.load_path):
+            checkpoint_path = args.load_path
     if checkpoint_path:
         if args.is_master:
             timer.report(f"Loading checkpoint from {checkpoint_path}")
