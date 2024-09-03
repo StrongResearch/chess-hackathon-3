@@ -204,7 +204,7 @@ Avg Loss [{avg_loss:,.3f}], Rank Corr.: [{rpt_rank_corr:,.3f}%], Examples: {rpt[
                 model.eval()
 
                 with torch.no_grad():
-                    for boards, scores in train_dataloader:
+                    for boards, scores in test_dataloader:
 
                         # Determine the current step
                         batch = test_dataloader.sampler.progress // test_dataloader.batch_size
