@@ -29,15 +29,6 @@ class Model(nn.Module):
         nn.init.xavier_uniform_(self.decoder.weight)
         nn.init.zeros_(self.reducer.bias)
         nn.init.zeros_(self.decoder.bias)
-    
-    def collate(self, batch, truncate_to=1_000):
-        seq_lens = torch.tensor([len(seq) for seq in batch])
-        max_seq_len = min(truncate_to, seq_lens.max())
-        pad_lens = torch.clamp(max_seq_len - seq_lens, min=0)
-        seqs = torch.nn.utils.rnn.pad_sequence(batch, batch_first=True, padding_value=0)[:,:truncate_to]
-        pad_from = max_seq_len - pad_lens
-        pad_mask = (pad_from.unsqueeze(1) <= torch.arange(seqs.shape[1]))
-        return seqs, pad_mask
 
     def forward(self, boards): # boards: tensor of boards (batch, 8, 8)
         boards = boards.flatten(1) # (batch, 64)
