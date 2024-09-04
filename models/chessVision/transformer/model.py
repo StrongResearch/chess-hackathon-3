@@ -5,7 +5,7 @@ import chess.pgn
 from chess import Board
 from collections import OrderedDict
 from utils.transformer_utils import PositionalEncoding, TransformerEncoderBlock
-from utils.data_preproc_utils import encode_board
+from utils.data_utils import encode_board
 from utils.constants import PIECE_CHARS
 
 class Model(nn.Module):

@@ -5,7 +5,7 @@ import chess.pgn
 from chess import Board
 import torch.nn.functional as F
 from utils.constants import PIECE_CHARS
-from utils.data_preproc_utils import encode_board
+from utils.data_utils import encode_board
 
 class Residual(nn.Module):
     """

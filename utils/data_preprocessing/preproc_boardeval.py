@@ -6,7 +6,7 @@ import socket
 from multiprocessing import Queue, Pool, Process
 import h5py
 from cycling_utils import atomic_torch_save
-from utils.data_preproc_utils import pgn_to_board_evaluations
+from utils.data_utils import pgn_to_board_evaluations
 from utils.datasets import PGN_HDF_Dataset
 
 SOURCE_DIR = "/data"
